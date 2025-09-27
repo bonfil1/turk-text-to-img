@@ -15,7 +15,19 @@ A production-ready text-to-image generation service built with TensorFlow, Keras
 
 ## Quick Start
 
-### Using Docker (Recommended)
+### 🚀 Google Colab (Fastest - 5 minutes)
+
+Deploy instantly with free GPU acceleration:
+
+1. Open [Google Colab](https://colab.research.google.com/)
+2. Upload `colab_notebook.ipynb` from this repository
+3. Enable GPU: Runtime → Change runtime type → GPU
+4. Run all cells
+5. Get your public API URL instantly!
+
+**Perfect for**: Testing, demos, sharing with others
+
+### 🐳 Using Docker (Recommended for Local)
 
 ```bash
 # Clone the repository
@@ -28,7 +40,7 @@ docker-compose up --build
 # The API will be available at http://localhost:8000
 ```
 
-### Local Development
+### 💻 Local Development
 
 ```bash
 # Create and activate virtual environment
@@ -126,6 +138,84 @@ make test-cov
 ```
 
 ## Deployment
+
+### Google Colab Deployment (Recommended for Testing)
+
+Deploy instantly to Google Colab for free GPU-accelerated text-to-image generation:
+
+#### Quick Start (5 minutes)
+
+1. **Open Google Colab**: Go to [colab.research.google.com](https://colab.research.google.com/)
+
+2. **Enable GPU**: Runtime → Change runtime type → Hardware accelerator → **GPU**
+
+3. **Upload the notebook**: Upload `colab_notebook.ipynb` from this repository
+
+4. **Run all cells**: The notebook will automatically:
+   - ✅ Install all dependencies
+   - ✅ Load Stable Diffusion model
+   - ✅ Start FastAPI server
+   - ✅ Create public URL with ngrok
+
+5. **Get your public URL**: After running, you'll get a public URL like `https://abc123.ngrok.io`
+
+#### Manual Setup in Colab
+
+If you prefer to set up manually, run this in a Colab cell:
+
+```python
+# Quick setup for Google Colab
+!git clone https://github.com/yourusername/turk-text-to-img.git
+%cd turk-text-to-img
+
+# Install dependencies
+!pip install -q tensorflow>=2.15.0 keras-cv>=0.6.0 fastapi>=0.104.0
+!pip install -q uvicorn[standard] python-multipart pillow pydantic
+!pip install -q pydantic-settings python-dotenv structlog nest-asyncio pyngrok
+
+# Run the Colab setup
+exec(open('colab_setup.py').read())
+```
+
+#### What You Get
+
+- **🎨 Public API**: Accessible worldwide via ngrok URL
+- **📖 Interactive Docs**: `your-url/docs` for testing
+- **⚡ GPU Acceleration**: Free T4 GPU or paid A100/V100
+- **🚀 Ready in 5 minutes**: No local setup required
+
+#### Example Usage
+
+Once deployed, test your API:
+
+```python
+import requests
+import base64
+from PIL import Image
+from io import BytesIO
+
+# Replace with your ngrok URL
+url = "https://your-ngrok-url.ngrok.io/generate"
+
+response = requests.post(url, json={
+    "prompt": "a beautiful sunset over mountains",
+    "num_steps": 25,  # Lower = faster
+    "guidance_scale": 7.5
+})
+
+if response.status_code == 200:
+    result = response.json()
+    img_data = base64.b64decode(result['image_base64'])
+    image = Image.open(BytesIO(img_data))
+    image.show()
+```
+
+#### Colab Tips
+
+- **Performance**: Use GPU runtime for 10x faster generation
+- **Reliability**: Add ngrok auth token for stable URLs
+- **Cost**: Free T4 GPU, upgrade to Colab Pro for A100/V100
+- **Limitations**: 12-hour session timeout, usage limits on free tier
 
 ### Docker Deployment
 
