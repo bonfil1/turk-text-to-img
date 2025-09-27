@@ -1,0 +1,39 @@
+[flake8]
+max-line-length = 88
+extend-ignore =
+    E203,  # whitespace before ':'
+    W503,  # line break before binary operator
+    E501,  # line too long (handled by black)
+    F401,  # imported but unused (let isort handle this)
+    E402,  # module level import not at top of file
+
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    .env,
+    venv,
+    build,
+    dist,
+    *.egg-info,
+    .pytest_cache,
+    .mypy_cache,
+    models/
+
+per-file-ignores =
+    __init__.py:F401
+    tests/*:D100,D101,D102,D103,D104
+    config/settings.py:E501
+
+# Specific rules for different file types
+filename = *.py
+
+# McCabe complexity
+max-complexity = 10
+
+# Docstring conventions
+docstring-convention = google
+
+# Import order
+import-order-style = google
+application-import-names = src,api,utils,config,tests
