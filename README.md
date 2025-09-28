@@ -316,6 +316,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 2. **Model loading takes forever**: Wait 5-10 minutes on first run (downloading weights)
 3. **Out of memory**: Enable High-RAM runtime or reduce `num_steps`
 4. **Session timeout**: Colab free tier has 12-hour limit
+5. **"guidance_scale" parameter error**: Automatically handled by fallback to `unconditional_guidance_scale`
 
 ### Debug Commands
 ```bash

@@ -95,13 +95,34 @@ async def generate_image_endpoint(request: ImageRequest):
         tf.random.set_seed(request.seed)
         np.random.seed(request.seed)
 
-    # Generate image
-    generated_images = model.text_to_image(
-        prompt=request.prompt,
-        batch_size=1,
-        num_steps=request.num_steps,
-        guidance_scale=request.guidance_scale,
-    )
+    # Generate image with version compatibility
+    try:
+        # Try with guidance_scale first (newer versions)
+        generated_images = model.text_to_image(
+            prompt=request.prompt,
+            batch_size=1,
+            num_steps=request.num_steps,
+            guidance_scale=request.guidance_scale,
+        )
+    except TypeError as e:
+        if "guidance_scale" in str(e):
+            # Fallback for older versions that use unconditional_guidance_scale
+            try:
+                generated_images = model.text_to_image(
+                    prompt=request.prompt,
+                    batch_size=1,
+                    num_steps=request.num_steps,
+                    unconditional_guidance_scale=request.guidance_scale,
+                )
+            except TypeError:
+                # If still failing, try without guidance parameter
+                generated_images = model.text_to_image(
+                    prompt=request.prompt,
+                    batch_size=1,
+                    num_steps=request.num_steps,
+                )
+        else:
+            raise e
 
     # Convert to PIL and base64
     img_array = generated_images[0]
@@ -128,13 +149,40 @@ async def root():
     return {"message": "Text-to-Image AI (Colab)", "docs_url": "/docs"}
 
 # Cell 3: Start the server
+import threading
+import asyncio
+from uvicorn import Config, Server
+
 def start_server():
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    """Start the FastAPI server with proper async handling."""
+    try:
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        # Configure and start the server
+        config = Config(app, host="0.0.0.0", port=8000, log_level="info")
+        server = Server(config)
+
+        # Run the server
+        loop.run_until_complete(server.serve())
+    except Exception as e:
+        print(f"❌ Server startup failed: {e}")
+
+# Start server in background thread
+server_thread = threading.Thread(target=start_server)
+server_thread.daemon = True
+server_thread.start()
+
+# Wait for server to start
+import time
+time.sleep(15)
 
 # Set ngrok auth token and start tunnel
 from pyngrok import ngrok
 ngrok.set_auth_token(NGROK_AUTH_TOKEN)
-public_url = ngrok.connect(8000)
+public_tunnel = ngrok.connect(8000)
+public_url = str(public_tunnel)  # Convert to string URL
 print("\n" + "="*60)
 print("🎨 TEXT-TO-IMAGE AI SERVICE IS LIVE!")
 print("="*60)
