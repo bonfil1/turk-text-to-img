@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Image AI Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-group input[type="range"] {
+            flex: 1;
+        }
+
+        .range-value {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .generate-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-image {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 20px 0;
+        }
+
+        .result-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .result-info h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result-info p {
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Text-to-Image AI Generator</h1>
+            <p>Transform your ideas into stunning images using AI-powered Stable Diffusion</p>
+        </div>
+
+        <form id="generateForm">
+            <div class="form-container">
+                <div class="form-section">
+                    <h3 style="margin-bottom: 20px; color: #333;">✨ Creative Settings</h3>
+
+                    <div class="form-group">
+                        <label for="prompt">🖋️ Image Description</label>
+                        <textarea id="prompt" name="prompt" placeholder="Describe the image you want to create... (e.g., 'a serene mountain landscape at sunset with a calm lake')" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="negative_prompt">🚫 What to Avoid (Optional)</label>
+                        <textarea id="negative_prompt" name="negative_prompt" placeholder="Describe what you don't want in the image... (e.g., 'blurry, low quality, people')"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="seed">🎲 Seed (Optional)</label>
+                        <input type="number" id="seed" name="seed" placeholder="Leave empty for random, or enter a number for reproducible results">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 style="margin-bottom: 20px; color: #333;">⚙️ Technical Settings</h3>
+
+                    <div class="form-group">
+                        <label for="num_steps">🔄 Generation Steps: <span class="range-value" id="steps-value">25</span></label>
+                        <input type="range" id="num_steps" name="num_steps" min="10" max="50" value="25" oninput="document.getElementById('steps-value').textContent = this.value">
+                        <small style="color: #666;">Lower = Faster, Higher = Better Quality</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="guidance_scale">🎯 Prompt Adherence: <span class="range-value" id="guidance-value">7.5</span></label>
+                        <input type="range" id="guidance_scale" name="guidance_scale" min="1" max="15" step="0.5" value="7.5" oninput="document.getElementById('guidance-value').textContent = this.value">
+                        <small style="color: #666;">Lower = More Creative, Higher = Follows Prompt Closely</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="batch_size">📱 Number of Images</label>
+                        <select id="batch_size" name="batch_size">
+                            <option value="1">1 Image (Fastest)</option>
+                            <option value="2">2 Images</option>
+                            <option value="3">3 Images</option>
+                            <option value="4">4 Images (Slowest)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="generate-btn" id="generateBtn">
+                🚀 Generate Amazing Images
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>🎨 AI is creating your masterpiece... This may take 30-120 seconds</p>
+        </div>
+
+        <div class="result-section" id="results"></div>
+    </div>
+
+    <script>
+        // Get API base URL (point to Colab ngrok URL)
+        const API_BASE_URL = 'https://nonagglutinating-uncensoriously-kathy.ngrok-free.dev';
+
+        document.getElementById('generateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+
+            // Get form data
+            const formData = new FormData(e.target);
+            const requestData = {
+                prompt: formData.get('prompt'),
+                num_steps: parseInt(formData.get('num_steps')),
+                guidance_scale: parseFloat(formData.get('guidance_scale')),
+                batch_size: parseInt(formData.get('batch_size'))
+            };
+
+            // Add optional fields if provided
+            if (formData.get('negative_prompt')) {
+                requestData.negative_prompt = formData.get('negative_prompt');
+            }
+            if (formData.get('seed')) {
+                requestData.seed = parseInt(formData.get('seed'));
+            }
+
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🎨 Generating...';
+            loading.style.display = 'block';
+            results.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                displayResults(result);
+
+            } catch (error) {
+                console.error('Generation failed:', error);
+                results.innerHTML = `
+                    <div class="error-message">
+                        <h3>❌ Generation Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Suggestions:</strong></p>
+                        <ul style="text-align: left; margin: 10px 0;">
+                            <li>Check your internet connection</li>
+                            <li>Try a simpler prompt</li>
+                            <li>Reduce the number of steps</li>
+                            <li>Make sure the AI service is running</li>
+                        </ul>
+                    </div>
+                `;
+            } finally {
+                // Reset button state
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🚀 Generate Amazing Images';
+                loading.style.display = 'none';
+            }
+        });
+
+        function displayResults(result) {
+            const results = document.getElementById('results');
+
+            // Handle Colab API format (single image with image_base64)
+            const imageId = `generated-image-0`;
+            const imagesHtml = `
+                <div style="margin: 20px 0;">
+                    <img id="${imageId}" src="data:image/png;base64,${result.image_base64}" alt="Generated Image" class="result-image">
+                    <br>
+                    <button class="download-btn" onclick="downloadImage('${imageId}', 'generated-image.png')">
+                        💾 Download Image
+                    </button>
+                </div>
+            `;
+
+            results.innerHTML = `
+                <div class="success-message">
+                    <h3>✅ Generation Successful!</h3>
+                    <p>Your AI-generated image is ready!</p>
+                </div>
+
+                ${imagesHtml}
+
+                <div class="result-info">
+                    <h3>📊 Generation Details</h3>
+                    <p><strong>Prompt:</strong> ${result.prompt}</p>
+                    <p><strong>Generation Time:</strong> ${result.generation_time.toFixed(1)} seconds</p>
+                    <p><strong>Parameters:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>Steps: ${result.parameters.num_steps}</li>
+                        <li>Guidance Scale: ${result.parameters.guidance_scale}</li>
+                        <li>Seed: ${result.parameters.seed || 'Random'}</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function downloadImage(imageId, filename) {
+            const img = document.getElementById(imageId);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Add some example prompts
+        const examplePrompts = [
+            "a majestic lion in a golden savanna at sunset",
+            "a cozy coffee shop in a bustling city street",
+            "a magical forest with glowing mushrooms and fireflies",
+            "a futuristic city with flying cars and neon lights",
+            "a peaceful zen garden with cherry blossoms",
+            "a steampunk airship floating above clouds",
+            "a cute robot playing with puppies in a park"
+        ];
+
+        // Add example prompt functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const promptTextarea = document.getElementById('prompt');
+            promptTextarea.placeholder += `
+
+💡 Try these examples:
+• ${examplePrompts.slice(0, 3).join('\n• ')}
+
+Click and edit any example above!`;
+        });
+    </script>
+</body>
+</html>
