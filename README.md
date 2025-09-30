@@ -303,9 +303,39 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Common Issues
 
+#### Local Development
 1. **Model Loading Errors**: Ensure sufficient disk space and memory
 2. **GPU Not Detected**: Verify CUDA installation and Docker GPU support
 3. **Port Already in Use**: Change the port in docker-compose.yml or .env
+
+#### Google Colab
+1. **ngrok authentication error**:
+   - Sign up for free at https://dashboard.ngrok.com/signup
+   - Get your token at https://dashboard.ngrok.com/get-started/your-authtoken
+   - Replace `YOUR_NGROK_AUTH_TOKEN_HERE` in the notebook
+2. **Model loading takes forever**: Wait 5-10 minutes on first run (downloading weights)
+3. **Out of memory**: Enable High-RAM runtime or reduce `num_steps`
+4. **Session timeout**: Colab free tier has 12-hour limit
+5. **"guidance_scale" parameter error**: Automatically handled by fallback to `unconditional_guidance_scale`
+
+### Debug Commands
+```bash
+# Check service health
+curl http://localhost:8000/api/v1/health
+
+# View logs
+make logs
+
+# Check environment
+make check-env
+```
+
+### Quick Fixes
+```python
+# For Colab ngrok auth error, run this:
+from pyngrok import ngrok
+ngrok.set_auth_token("your_actual_token_here")
+```
 
 ### Support
 

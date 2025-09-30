@@ -95,13 +95,39 @@ class StableDiffusionModel:
             # Generate images
             logger.info(f"Generating {batch_size} image(s) with prompt: '{prompt[:50]}...'")
 
-            generated_images = self.model.text_to_image(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                batch_size=batch_size,
-                num_steps=num_steps,
-                guidance_scale=guidance_scale,
-            )
+            # Generate images with version compatibility
+            try:
+                # Try with guidance_scale first (newer KerasCV versions)
+                generated_images = self.model.text_to_image(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    batch_size=batch_size,
+                    num_steps=num_steps,
+                    guidance_scale=guidance_scale,
+                )
+            except TypeError as e:
+                if "guidance_scale" in str(e):
+                    logger.warning("Using unconditional_guidance_scale for older KerasCV version")
+                    # Fallback for older versions that use unconditional_guidance_scale
+                    try:
+                        generated_images = self.model.text_to_image(
+                            prompt=prompt,
+                            negative_prompt=negative_prompt,
+                            batch_size=batch_size,
+                            num_steps=num_steps,
+                            unconditional_guidance_scale=guidance_scale,
+                        )
+                    except TypeError:
+                        # If still failing, try without guidance parameter
+                        logger.warning("Using basic parameters without guidance scale")
+                        generated_images = self.model.text_to_image(
+                            prompt=prompt,
+                            negative_prompt=negative_prompt,
+                            batch_size=batch_size,
+                            num_steps=num_steps,
+                        )
+                else:
+                    raise e
 
             # Convert to PIL Images
             pil_images = []

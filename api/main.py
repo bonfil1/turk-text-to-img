@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from api.routes import router
@@ -134,13 +135,23 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+# Mount static files for web interface
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Include API routes
 app.include_router(router, prefix="/api/v1")
 
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
+    """Root endpoint - redirect to web interface."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/static/index.html")
+
+
+@app.get("/api")
+async def api_info():
+    """API information endpoint."""
     uptime = time.time() - startup_time
     return {
         "service": settings.api_title,
@@ -148,6 +159,13 @@ async def root():
         "status": "running",
         "uptime": uptime,
         "environment": settings.environment,
+        "web_interface": "/static/index.html",
+        "api_docs": "/docs",
+        "api_endpoints": {
+            "generate": "/api/v1/generate",
+            "health": "/api/v1/health",
+            "model_info": "/api/v1/model/info"
+        }
     }
 
 

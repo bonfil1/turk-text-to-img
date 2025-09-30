@@ -4,14 +4,25 @@ Deploy your text-to-image AI service to Google Colab in 5 minutes with free GPU 
 
 ## 🎯 Quick Setup
 
-### Option 1: Upload Notebook (Recommended)
+### Step 1: Get ngrok Auth Token (Required)
+
+Since ngrok now requires authentication, you need a free account:
+
+1. **Sign up**: Go to [ngrok.com/signup](https://dashboard.ngrok.com/signup) (free account)
+2. **Get auth token**: After signup, go to [your authtoken page](https://dashboard.ngrok.com/get-started/your-authtoken)
+3. **Copy the token**: It looks like `2abc123_def456ghi789jkl...`
+
+### Step 2: Deploy to Colab
+
+#### Option 1: Upload Notebook (Recommended)
 
 1. **Download the notebook**: Download `colab_notebook.ipynb` from this repository
 2. **Open Google Colab**: Go to [colab.research.google.com](https://colab.research.google.com/)
 3. **Upload notebook**: File → Upload notebook → Select `colab_notebook.ipynb`
 4. **Enable GPU**: Runtime → Change runtime type → Hardware accelerator → **GPU**
-5. **Run all cells**: Runtime → Run all (or Ctrl+F9)
-6. **Get your URL**: Wait for the ngrok URL to appear (usually takes 5-10 minutes)
+5. **Add your ngrok token**: In the ngrok setup cell, replace `YOUR_NGROK_AUTH_TOKEN_HERE` with your actual token
+6. **Run all cells**: Runtime → Run all (or Ctrl+F9)
+7. **Get your URL**: Wait for the ngrok URL to appear (usually takes 5-10 minutes)
 
 ### Option 2: Manual Setup
 
@@ -23,6 +34,9 @@ Copy and paste this into a new Colab notebook:
 !pip install -q tensorflow>=2.15.0 keras-cv>=0.6.0 fastapi>=0.104.0
 !pip install -q uvicorn[standard] python-multipart pillow pydantic
 !pip install -q pydantic-settings python-dotenv structlog nest-asyncio pyngrok
+
+# IMPORTANT: Set your ngrok auth token here
+NGROK_AUTH_TOKEN = "YOUR_NGROK_AUTH_TOKEN_HERE"  # Replace with your actual token from https://dashboard.ngrok.com/get-started/your-authtoken
 
 # Cell 2: Setup the service
 import os
@@ -81,13 +95,34 @@ async def generate_image_endpoint(request: ImageRequest):
         tf.random.set_seed(request.seed)
         np.random.seed(request.seed)
 
-    # Generate image
-    generated_images = model.text_to_image(
-        prompt=request.prompt,
-        batch_size=1,
-        num_steps=request.num_steps,
-        guidance_scale=request.guidance_scale,
-    )
+    # Generate image with version compatibility
+    try:
+        # Try with guidance_scale first (newer versions)
+        generated_images = model.text_to_image(
+            prompt=request.prompt,
+            batch_size=1,
+            num_steps=request.num_steps,
+            guidance_scale=request.guidance_scale,
+        )
+    except TypeError as e:
+        if "guidance_scale" in str(e):
+            # Fallback for older versions that use unconditional_guidance_scale
+            try:
+                generated_images = model.text_to_image(
+                    prompt=request.prompt,
+                    batch_size=1,
+                    num_steps=request.num_steps,
+                    unconditional_guidance_scale=request.guidance_scale,
+                )
+            except TypeError:
+                # If still failing, try without guidance parameter
+                generated_images = model.text_to_image(
+                    prompt=request.prompt,
+                    batch_size=1,
+                    num_steps=request.num_steps,
+                )
+        else:
+            raise e
 
     # Convert to PIL and base64
     img_array = generated_images[0]
@@ -114,11 +149,40 @@ async def root():
     return {"message": "Text-to-Image AI (Colab)", "docs_url": "/docs"}
 
 # Cell 3: Start the server
-def start_server():
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+import threading
+import asyncio
+from uvicorn import Config, Server
 
-# Start ngrok tunnel
-public_url = ngrok.connect(8000)
+def start_server():
+    """Start the FastAPI server with proper async handling."""
+    try:
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        # Configure and start the server
+        config = Config(app, host="0.0.0.0", port=8000, log_level="info")
+        server = Server(config)
+
+        # Run the server
+        loop.run_until_complete(server.serve())
+    except Exception as e:
+        print(f"❌ Server startup failed: {e}")
+
+# Start server in background thread
+server_thread = threading.Thread(target=start_server)
+server_thread.daemon = True
+server_thread.start()
+
+# Wait for server to start
+import time
+time.sleep(15)
+
+# Set ngrok auth token and start tunnel
+from pyngrok import ngrok
+ngrok.set_auth_token(NGROK_AUTH_TOKEN)
+public_tunnel = ngrok.connect(8000)
+public_url = str(public_tunnel)  # Convert to string URL
 print("\n" + "="*60)
 print("🎨 TEXT-TO-IMAGE AI SERVICE IS LIVE!")
 print("="*60)
